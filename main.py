@@ -2,6 +2,7 @@ import sdl2
 import sdl2.ext
 import ctypes
 from sdl2.sdlttf import *
+import math
 
 
 class Position:
@@ -16,13 +17,15 @@ class Position:
         self.r = r
         self.rx = self.pos_x + r
         self.ry = self.pos_y + r
+        self.amplitude = 100
+        self.frequency = 0.1
+        self.time = 0
 
     def is_outside(self):
-        if self.prop:
-            if self.pos_x >= 620 or self.pos_x <= 0:
-                self.velocity_x = -self.velocity_x
-            if self.pos_y >= 900 or self.pos_y <= 0:
-                self.velocity_y = -self.velocity_y
+        if self.pos_x >= 850 or self.pos_x <= -200:
+            self.velocity_x = -self.velocity_x
+        if self.pos_y >= 850 or self.pos_y <= -200:
+            self.velocity_y = -self.velocity_y
 
     def set_pos_x(self, pos_x):
         self.pos_x = pos_x
@@ -32,6 +35,17 @@ class Position:
 
     def set_pos_y(self, pos_y):
         self.pos_y = pos_y
+
+    def alien_move_on(self):
+        self.time += 1
+        new_x = self.start_x - self.velocity_x * self.time
+        y = self.amplitude * math.sin(self.frequency * self.time)
+        new_y = self.start_y + y
+        if new_x < -500:
+            self.set_pos_x(self.start_x)
+            self.time = 0
+        self.set_pos_x(int(new_x))
+        self.set_pos_y(int(new_y))
 
     def move_on(self):
         self.set_pos_y(pos_y=self.pos_y + self.velocity_y)
@@ -88,9 +102,13 @@ class Game:
         self.lost = False
         self.shield = True
         self.p_bullets = []
+        self.aliens = self.loadTexture('img/gflota.bmp', renderer=self.ren)
+        self.hp = 100
+        self.stats = self.loadTexture('img/tab.bmp', renderer=self.ren)
 
     def shoot(self):
-        self.p_bullets.append([self.playerX + 29, self.playerY])
+        if len(self.p_bullets) < 20:
+            self.p_bullets.append([self.playerX + 29, self.playerY])
 
     def loadTexture(self, filePath, renderer):
         img = sdl2.SDL_LoadBMP(str.encode(filePath))
@@ -113,9 +131,21 @@ class Game:
         loc.h = h.contents.value
         sdl2.SDL_RenderCopy(render, texture, None, loc)
 
+    def bang_bang(self, prop, width, height):
+        for bullet in self.p_bullets:
+            bullet_x, bullet_y = bullet
+            if (prop.get_pos_x() <= bullet_x <= prop.get_pos_x() + width) and (
+                    prop.get_pos_y() <= bullet_y <= prop.get_pos_y() + height):
+                self.p_bullets.remove(bullet)
+                return True
+            else:
+                return False
+
     def run(self):
-        meteor1 = Position(450, 100, 5, 5, True, 72)
-        meteor2 = Position(200, 500, 5, 5, True, 72)
+        meteor1 = Position(450, 100, 5, 5, False, 72)
+        meteor2 = Position(200, 500, 5, 5, False, 72)
+        alien1 = Position(800, 200, 4, 0, True, 60)
+        alien2 = Position(800, 400, 4, 0, True, 60)
         if not self.background:
             sdl2.SDL_DestroyTexture(self.background)
             sdl2.SDL_DestroyRenderer(self.ren)
@@ -130,19 +160,20 @@ class Game:
                     break
                 if event.type == sdl2.SDL_KEYDOWN:
                     if event.key.keysym.sym == sdl2.SDLK_LEFT:
-                        self.accelerationX = -0.5
+                        self.accelerationX = -0.4
                     elif event.key.keysym.sym == sdl2.SDLK_RIGHT:
-                        self.accelerationX = 0.5
+                        self.accelerationX = 0.4
                     elif event.key.keysym.sym == sdl2.SDLK_UP:
-                        self.accelerationY = -0.5
+                        self.accelerationY = -0.4
                     elif event.key.keysym.sym == sdl2.SDLK_DOWN:
-                        self.accelerationY = 0.5
+                        self.accelerationY = 0.4
                     elif event.key.keysym.sym == sdl2.SDLK_ESCAPE:
                         self.running = False
                         break
                     elif event.key.keysym.sym == sdl2.SDLK_SPACE:
                         self.shoot()
                     elif event.key.keysym.sym == sdl2.SDLK_r:
+                        self.hp = 100
                         self.run()
 
                 if event.type == sdl2.SDL_KEYUP:
@@ -174,11 +205,12 @@ class Game:
             meteor1.move_on()
             meteor2.is_outside()
             meteor2.move_on()
+            alien1.alien_move_on()
+            alien2.alien_move_on()
             if meteor1.is_colision_with_meteor(
                     player_y=meteor2.get_pos_y(), player_x=meteor2.get_pos_x(), prop_width=144, prop_height=130):
                 sdl2.SDL_Delay(15)
                 meteor1.change_direction_and_speed()
-
             if meteor2.is_colision_with_meteor(player_x=meteor1.get_pos_x(), player_y=meteor1.get_pos_y(),
                                                prop_width=144, prop_height=130):
                 sdl2.SDL_Delay(15)
@@ -189,11 +221,13 @@ class Game:
                 self.velocityX = -self.velocityX
                 self.velocityY = -self.velocityY
                 meteor1.change_direction_and_speed()
+                self.hp = self.hp - 10
             if meteor2.is_colision_with_meteor(player_x=self.playerX, player_y=self.playerY, prop_width=58,
                                                prop_height=37):
                 self.velocityY = -self.velocityY
                 self.velocityX = -self.velocityX
                 meteor2.change_direction_and_speed()
+                self.hp = self.hp - 10
             for bullet in self.p_bullets:
                 bullet[0] += 10
             self.p_bullets = [bullet for bullet in self.p_bullets if bullet[1] > 0]
@@ -202,8 +236,16 @@ class Game:
             self.renderTexture(self.ship, self.ren, int(self.playerX), int(self.playerY))
             self.renderTexture(self.meteor, self.ren, meteor1.get_pos_x(), meteor1.get_pos_y())
             self.renderTexture(self.meteor, self.ren, meteor2.get_pos_x(), meteor2.get_pos_y())
+            self.renderTexture(self.aliens, self.ren, alien1.get_pos_x(), alien1.get_pos_y())
+            self.renderTexture(self.aliens, self.ren, alien2.get_pos_x(), alien2.get_pos_y())
+            self.renderTexture(self.stats, self.ren, 0, 600)
             sdl2.SDL_SetRenderDrawColor(self.ren, 255, 0, 0, 255)
             sdl2.SDL_SetRenderDrawColor(self.ren, 255, 0, 0, 255)
+            if self.hp <= 0:
+                sdl2.SDL_DestroyTexture(self.ship)
+                sdl2.SDL_DestroyTexture(self.meteor)
+                sdl2.SDL_DestroyTexture(self.aliens)
+
             for bullet in self.p_bullets:
                 sdl2.SDL_RenderDrawLine(self.ren, int(bullet[0]), int(bullet[1]), int(bullet[0]) + 15, int(bullet[1]))
 
