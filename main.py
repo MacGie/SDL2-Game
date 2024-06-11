@@ -249,7 +249,7 @@ class Game:
             if self.hp <= 0:
                 self.hp = 100
                 self.shoot_down = 0
-                self.run()
+                self.run()requirements
 
             sdl2.SDL_SetRenderDrawColor(self.ren, 255, 0, 0, 255)
             for bullet in self.p_bullets:
