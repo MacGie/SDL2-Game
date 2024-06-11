@@ -43,6 +43,7 @@ class Game:
         self.stats = self.loadTexture('img/tab.bmp', renderer=self.ren)
         self.aliens_bullet = []
         self.shoot_down = 0
+        self.hard_mode = False
 
     def renderText(self, message, fontFile, color, fontSize, renderer, x, y):
         font = TTF_OpenFont(fontFile.encode('utf-8'), fontSize)
@@ -133,6 +134,21 @@ class Game:
                         self.shoot()
                     elif event.key.keysym.sym == sdl2.SDLK_r:
                         self.hp = 100
+                        self.playerY = 0
+                        self.playerX = 0
+                        self.shoot_down = 0
+                        self.p_bullets = []
+                        self.run()
+                    elif event.key.keysym.sym == sdl2.SDLK_t:
+                        self.hp = 100
+                        self.playerY = 0
+                        self.playerX = 0
+                        self.p_bullets=[]
+                        self.shoot_down=0
+                        if not self.hard_mode:
+                            self.hard_mode = True
+                        else:
+                            self.hard_mode = False
                         self.run()
 
                 if event.type == sdl2.SDL_KEYUP:
@@ -170,23 +186,21 @@ class Game:
             if meteor1.is_colision_with_meteor(
                     player_y=meteor2.get_pos_y(), player_x=meteor2.get_pos_x(), prop_width=144, prop_height=130):
                 sdl2.SDL_Delay(5)
-                meteor1.change_direction_and_speed()
-            if meteor2.is_colision_with_meteor(player_x=meteor1.get_pos_x(), player_y=meteor1.get_pos_y(),
-                                               prop_width=144, prop_height=130):
-                sdl2.SDL_Delay(5)
-                meteor2.change_direction_and_speed()
-
+                meteor2.velocity_x, meteor2.velocity_y = meteor1.collision(meteor2.velocity_x,
+                                                                           meteor2.velocity_y,
+                                                                           meteor2.get_pos_x(),
+                                                                           meteor2.get_pos_y(), 3, self.hard_mode)
             if meteor1.is_colision_with_meteor(player_x=self.playerX, player_y=self.playerY, prop_width=58,
                                                prop_height=37):
-                self.velocityX = int(-self.velocityX * 0.6)
-                self.velocityY = int(-self.velocityY * 0.6)
-                meteor1.change_direction_and_speed()
+                self.velocityX, self.velocityY = meteor1.collision(self.velocityX, self.velocityY,
+                                                                   self.playerX, self.playerY, 0.2, self.hard_mode)
                 self.hp = self.hp - 10
             if meteor2.is_colision_with_meteor(player_x=self.playerX, player_y=self.playerY, prop_width=58,
                                                prop_height=37):
                 self.velocityY = -self.velocityY
                 self.velocityX = -self.velocityX
-                meteor2.change_direction_and_speed()
+                meteor2.collision(self.velocityX, self.velocityY, self.playerX, self.playerY, 0.5,
+                                  hard_mode=self.hard_mode)
                 self.hp = self.hp - 10
 
             for bullet in self.p_bullets:
@@ -222,15 +236,20 @@ class Game:
             self.renderTexture(self.aliens, self.ren, alien2.get_pos_x(), alien2.get_pos_y())
             self.renderTexture(self.stats, self.ren, 0, 600)
             self.renderText(f"HP: {self.hp}", 'font/PixelGameFont.ttf', [255, 255, 255], 30, self.ren, 50, 700)
-            self.renderText(f"Zestrzelone statki : {self.shoot_down}", 'font/PixelGameFont.ttf', [255, 255, 255], 30,
+            self.renderText(f"Zestrzelone statki : {self.shoot_down}", 'font/PixelGameFont.ttf', [255, 255, 255], 25,
                             self.ren, 250, 700)
-
+            if not self.hard_mode:
+                self.renderText(f"Hard Mode : OFF", 'font/PixelGameFont.ttf', [255, 255, 255], 20, self.ren, 250, 750)
+            else:
+                self.renderText(f"Hard Mode : ON", 'font/PixelGameFont.ttf', [255, 255, 255], 20, self.ren, 250, 750)
             ''' Przy porażce restart gry'''
+            self.renderText(f"R - Restart", 'font/PixelGameFont.ttf', [255, 255, 255], 15, self.ren, 650, 620)
+            self.renderText(f"T - Hard Mode", 'font/PixelGameFont.ttf', [255, 255, 255], 15, self.ren, 650, 640)
+
             if self.hp <= 0:
                 self.hp = 100
                 self.shoot_down = 0
                 self.run()
-
 
             sdl2.SDL_SetRenderDrawColor(self.ren, 255, 0, 0, 255)
             for bullet in self.p_bullets:
@@ -245,6 +264,7 @@ class Game:
         sdl2.SDL_DestroyWindow(self.window)
         sdl2.SDL_QUIT()
         return 0
+
     def render(self):
         self.window.refresh()
 

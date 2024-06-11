@@ -1,5 +1,6 @@
 import math
 
+
 class Position:
     def __init__(self, start_x, start_y, velocity_x, velocity_y, prop, r):
         self.start_x = start_x
@@ -70,12 +71,41 @@ class Position:
         distance_x_0 = (distance_x_m ** 2 + distance_y_0 ** 2) ** 0.5
         return distance_0_0 <= self.r or distance_x_y <= self.r or distance_x_0 <= self.r or distance_0_y <= self.r
 
-    def change_direction_and_speed(self):
-        self.velocity_x = -self.velocity_x
-        self.velocity_y = -self.velocity_y
+    def change_direction_and_speed(self, vx, vy, x, y, m_statku):
+        max_v=10
+        m_asteroidy = 0.5
+        r = [x - self.get_pos_x(), y - self.get_pos_y()]
+        v = [vx - self.velocity_x, vy - self.velocity_y]
+        skalar_v_r = v[0] * r[0] + v[1] * r[1]
+        sqr_r = r[0] ** 2 + r[1] ** 2
+        vx = vx - ((2 * m_asteroidy) / (m_statku + m_asteroidy)) * (skalar_v_r / sqr_r) * r[0]
+        vy = vy - ((2 * m_asteroidy) / (m_statku + m_asteroidy)) * (skalar_v_r / sqr_r) * r[1]
+        self.velocity_x = self.velocity_x - ((2 * m_statku) / (m_statku + m_asteroidy)) * (skalar_v_r / sqr_r) * r[0]
+        self.velocity_y = self.velocity_y - ((2 * m_statku) / (m_statku + m_asteroidy)) * (skalar_v_r / sqr_r) * r[1]
+        self.velocity_x = int(self.velocity_x)
+        self.velocity_y = int(self.velocity_y)
+        vx = int(vx)
+        vy = int(vy)
 
+        vx = max(min(vx, max_v), -max_v)
+        vy = max(min(vy, max_v), -max_v)
+        self.velocity_x = max(min(self.velocity_x, max_v), -max_v)
+        self.velocity_y = max(min(self.velocity_y, max_v), -max_v)
+
+        return vx, vy
     def shoot(self):
         bullet_x = self.get_pos_x() - 0
         bullet_y = self.get_pos_y() + 20
         return bullet_x, bullet_y
+    def simple_collision(self,vx,vy):
+        vx=-vx
+        vy=-vy
+        self.velocity_x=-self.velocity_x
+        self.velocity_y=-self.velocity_y
+        return vx,vy
 
+    def collision(self,vx, vy, x, y, m_statku,hard_mode):
+        if hard_mode:
+            return self.change_direction_and_speed(vx, vy, x, y, m_statku)
+        else :
+          return self.simple_collision(vx,vy)
