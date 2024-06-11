@@ -1,90 +1,9 @@
 import random
 import sdl2
-import sdl2.ext
 import ctypes
+import sdl2.ext
 from sdl2.sdlttf import *
-import math
-import time
-
-
-class Position:
-    def __init__(self, start_x, start_y, velocity_x, velocity_y, prop, r):
-        self.start_x = start_x
-        self.start_y = start_y
-        self.velocity_x = velocity_x
-        self.velocity_y = velocity_y
-        self.pos_y = start_y
-        self.pos_x = start_x
-        self.prop = prop
-        self.r = r
-        self.rx = self.pos_x + r
-        self.ry = self.pos_y + r
-        self.amplitude = 120
-        self.frequency = 0.1
-        self.time = 0
-        self.shoot_cooldown = 0
-        self.shoot_frequency = 80
-        self.is_ctf = False
-        
-    def is_outside(self):
-        if self.pos_x >= 850 or self.pos_x <= -200:
-            self.velocity_x = -self.velocity_x
-        if self.pos_y >= 850 or self.pos_y <= -200:
-            self.velocity_y = -self.velocity_y
-
-    def set_pos_x(self, pos_x):
-        self.pos_x = pos_x
-
-    def get_pos_x(self):
-        return self.pos_x
-
-    def set_pos_y(self, pos_y):
-        self.pos_y = pos_y
-
-    def alien_move_on(self):
-        self.time += 1
-        new_x = self.start_x - self.velocity_x * self.time
-        y = self.amplitude * math.sin(self.frequency * self.time)
-        new_y = self.start_y + y
-        if new_x < -500:
-            self.set_pos_x(self.start_x)
-            self.time = 0
-            self.is_ctf = True
-        self.set_pos_x(int(new_x))
-        self.set_pos_y(int(new_y))
-        self.shoot_cooldown -= 1
-        if self.shoot_cooldown <= 0:
-            self.shoot()
-            self.shoot_cooldown = self.shoot_frequency
-
-    def move_on(self):
-        self.set_pos_y(pos_y=self.pos_y + self.velocity_y)
-        self.set_pos_x(pos_x=self.pos_x + self.velocity_x)
-        self.ry = self.pos_y + self.r
-        self.rx = self.pos_x + self.r
-
-    def get_pos_y(self):
-        return self.pos_y
-
-    def is_colision_with_meteor(self, player_x, player_y, prop_width, prop_height):
-        distance_x_0 = player_x - self.rx
-        distance_y_0 = player_y - self.ry
-        distance_x_m = (player_x + prop_width) - self.rx
-        distance_y_m = (player_y + prop_height) - self.ry
-        distance_0_0 = (distance_x_0 ** 2 + distance_y_0 ** 2) ** 0.5
-        distance_x_y = (distance_x_m ** 2 + distance_y_m ** 2) ** 0.5
-        distance_0_y = (distance_x_0 ** 2 + distance_y_m ** 2) ** 0.5
-        distance_x_0 = (distance_x_m ** 2 + distance_y_0 ** 2) ** 0.5
-        return distance_0_0 <= self.r or distance_x_y <= self.r or distance_x_0 <= self.r or distance_0_y <= self.r
-
-    def change_direction_and_speed(self):
-        self.velocity_x = -self.velocity_x
-        self.velocity_y = -self.velocity_y
-
-    def shoot(self):
-        bullet_x = self.get_pos_x() - 0
-        bullet_y = self.get_pos_y() + 20
-        return bullet_x, bullet_y
+from prop_managment import Position
 
 
 class Game:
@@ -123,7 +42,7 @@ class Game:
         self.hp = 100
         self.stats = self.loadTexture('img/tab.bmp', renderer=self.ren)
         self.aliens_bullet = []
-        self.shoot_down=0
+        self.shoot_down = 0
 
     def renderText(self, message, fontFile, color, fontSize, renderer, x, y):
         font = TTF_OpenFont(fontFile.encode('utf-8'), fontSize)
@@ -134,19 +53,20 @@ class Game:
         text_surface = TTF_RenderText_Solid(font, message.encode('utf-8'), sdl_color)
         if not text_surface:
             TTF_CloseFont(font)
-            print(f"Failed to render text: {TTF_GetError().decode('utf-8')}")
+            print(f"Nie udało się wczytać czcionki: {TTF_GetError().decode('utf-8')}")
             return
         text_texture = sdl2.SDL_CreateTextureFromSurface(renderer, text_surface)
         if not text_texture:
             sdl2.SDL_FreeSurface(text_surface)
             TTF_CloseFont(font)
-            print(f"Failed to create texture: {sdl2.SDL_GetError().decode('utf-8')}")
+            print(f"Nie udało się stworzyć textury: {sdl2.SDL_GetError().decode('utf-8')}")
             return
         text_rect = sdl2.SDL_Rect(x, y, text_surface.contents.w, text_surface.contents.h)
         sdl2.SDL_RenderCopy(renderer, text_texture, None, text_rect)
         sdl2.SDL_FreeSurface(text_surface)
         sdl2.SDL_DestroyTexture(text_texture)
         TTF_CloseFont(font)
+
     def shoot(self):
         self.p_bullets.append([self.playerX + 40, self.playerY + 15])
 
@@ -258,8 +178,8 @@ class Game:
 
             if meteor1.is_colision_with_meteor(player_x=self.playerX, player_y=self.playerY, prop_width=58,
                                                prop_height=37):
-                self.velocityX = -self.velocityX
-                self.velocityY = -self.velocityY
+                self.velocityX = int(-self.velocityX * 0.6)
+                self.velocityY = int(-self.velocityY * 0.6)
                 meteor1.change_direction_and_speed()
                 self.hp = self.hp - 10
             if meteor2.is_colision_with_meteor(player_x=self.playerX, player_y=self.playerY, prop_width=58,
@@ -276,7 +196,7 @@ class Game:
             if self.bang_bang(alien1, 150, 102, self.p_bullets):
                 alien1.set_pos_x(random.randint(700, 900))
                 alien1.time = 0
-                self.shoot_down+=1
+                self.shoot_down += 1
                 while alien1.get_pos_y() >= alien2.get_pos_y() + 150:
                     alien1.set_pos_y(random.randint(0, 450))
             if self.bang_bang(alien2, 150, 102, self.p_bullets):
@@ -301,17 +221,21 @@ class Game:
             self.renderTexture(self.aliens, self.ren, alien1.get_pos_x(), alien1.get_pos_y())
             self.renderTexture(self.aliens, self.ren, alien2.get_pos_x(), alien2.get_pos_y())
             self.renderTexture(self.stats, self.ren, 0, 600)
-            self.renderText(f"HP: {self.hp}",'font/PixelGameFont.ttf',[255,255,255],30,self.ren,50,700)
-            self.renderText(f"Zestrzelone statki : {self.shoot_down}",'font/PixelGameFont.ttf',[255,255,255],30,self.ren,250,700)
+            self.renderText(f"HP: {self.hp}", 'font/PixelGameFont.ttf', [255, 255, 255], 30, self.ren, 50, 700)
+            self.renderText(f"Zestrzelone statki : {self.shoot_down}", 'font/PixelGameFont.ttf', [255, 255, 255], 30,
+                            self.ren, 250, 700)
+
+            ''' Przy porażce restart gry'''
             if self.hp <= 0:
                 self.hp = 100
+                self.shoot_down = 0
                 self.run()
+
+
             sdl2.SDL_SetRenderDrawColor(self.ren, 255, 0, 0, 255)
             for bullet in self.p_bullets:
                 sdl2.SDL_RenderDrawLine(self.ren, int(bullet[0]), int(bullet[1]), int(bullet[0]) + 15, int(bullet[1]))
 
-            for bullet in self.aliens_bullet:
-                sdl2.SDL_RenderDrawLine(self.ren, int(bullet[0]), int(bullet[1]), int(bullet[0]) + 15, int(bullet[1]))
             sdl2.SDL_RenderPresent(self.ren)
 
         # Sprzatanie
@@ -321,10 +245,6 @@ class Game:
         sdl2.SDL_DestroyWindow(self.window)
         sdl2.SDL_QUIT()
         return 0
-
-    def update(self):
-        return 0
-
     def render(self):
         self.window.refresh()
 
