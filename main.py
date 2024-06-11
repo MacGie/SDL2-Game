@@ -174,13 +174,13 @@ class Game:
                     break
                 if event.type == sdl2.SDL_KEYDOWN:
                     if event.key.keysym.sym == sdl2.SDLK_LEFT:
-                        self.accelerationX = -0.4
+                        self.accelerationX = -0.3
                     elif event.key.keysym.sym == sdl2.SDLK_RIGHT:
-                        self.accelerationX = 0.4
+                        self.accelerationX = 0.3
                     elif event.key.keysym.sym == sdl2.SDLK_UP:
-                        self.accelerationY = -0.4
+                        self.accelerationY = -0.3
                     elif event.key.keysym.sym == sdl2.SDLK_DOWN:
-                        self.accelerationY = 0.4
+                        self.accelerationY = 0.3
                     elif event.key.keysym.sym == sdl2.SDLK_ESCAPE:
                         self.running = False
                         break
